@@ -1,14 +1,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "MeowVapor",
+    name: "MeowMongo",
     targets: [
         Target(name: "MeowVapor"),
         Target(name: "MeowSample", dependencies: ["MeowVapor"])
     ],
     dependencies: [
         .Package(url: "https://github.com/OpenKitten/MongoKitten.git", Version(0,0,19)),
-        .Package(url: "https://github.com/vapor/vapor.git", majorVersion: 1),
-        // TODO: .Package(url: "https://github.com/OpenKitten/KittenTemplating.git", majorVersion: 0, minor: 1),
     ]
 )

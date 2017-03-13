@@ -8,7 +8,6 @@
 
 import MongoKitten
 import Turnstile
-import Vapor
 
 /// The main object, keeps track of the database
 public enum Meow {
@@ -42,11 +41,5 @@ public enum Meow {
         case missingOrInvalidValue(key: String)
         case referenceError(id: ObjectId, type: Model.Type)
         case undeletableObject(reason: String)
-    }
-}
-
-extension ObjectId : StringInitializable{
-    public init?(from string: String) throws {
-        try self.init(string)
     }
 }

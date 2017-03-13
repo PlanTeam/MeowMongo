@@ -1,5 +1,4 @@
 @_exported import MongoKitten
-import Vapor
 
 /// When implemented, indicated that this is a model that resides at the lowest level of a collection, as a separate entity.
 ///
