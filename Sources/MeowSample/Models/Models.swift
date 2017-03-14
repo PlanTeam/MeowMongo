@@ -1,4 +1,4 @@
-import MeowVapor
+import MeowMongo
 import Foundation
 
 final class User: Model {
