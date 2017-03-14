@@ -7,7 +7,6 @@
 //
 
 import MongoKitten
-import Turnstile
 
 /// The main object, keeps track of the database
 public enum Meow {

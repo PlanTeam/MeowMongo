@@ -1,7 +1,5 @@
-eimport HTTP
-import Vapor
 import Foundation
-import MeowVapor
+import MeowMongo
 
 <%
 // Selects all classes and structs that are either based on a model or embeddable protocol
