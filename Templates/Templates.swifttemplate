@@ -375,3 +375,5 @@ for type in types.based["Model"] ?? [] {
       try meowCollection.createIndexes([(name: name ?? "", parameters: indexSubject.makeIndexParameters())])
     }
   }
+
+<% } %>
