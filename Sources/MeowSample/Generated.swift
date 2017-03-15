@@ -488,17 +488,6 @@ extension User : ConcreteModel {
 }
 
 
-extension User : StringInitializable {
-    public convenience init?(from string: String) throws {
-        guard let document = try User.meowCollection.findOne("_id" == (try ObjectId(string))) else {
-            return nil
-        }
-        
-        try self.init(fromDocument: document)
-    }
-}
-
-
 //   extension User : Primitive {
 //     public var typeIdentifier: UInt8 {
 //       return 0x03
