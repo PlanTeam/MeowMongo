@@ -1,6 +1,6 @@
 import XCTest
-@testable import MeowVaporTests
+@testable import MeowMongoTests
 
 XCTMain([
-     testCase(MeowVaporTests.allTests),
+     testCase(MeowMongoTests.allTests),
 ])

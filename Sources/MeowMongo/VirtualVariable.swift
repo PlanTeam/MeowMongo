@@ -79,6 +79,34 @@ public struct VirtualArray<V: VirtualVariable> : VirtualVariable {
     }
 }
 
+// sourcery: donotequate
+public struct VirtualSingleValueArray<V: ConcreteSingleValueSerializable> : VirtualVariable {
+    public var name: String
+    public init(name: String) { self.name = name }
+    
+    typealias VirtualSubtype = V.Type
+    
+    public func contains(_ other: V) -> Query {
+        return [
+            self.name: other.meowSerialize()
+        ]
+    }
+}
+
+// sourcery: donotequate
+public struct VirtualEmbeddablesArray<V: ConcreteSerializable> : VirtualVariable {
+    public var name: String
+    public init(name: String) { self.name = name }
+    
+    typealias VirtualSubtype = V.Type
+    
+    public func contains(_ other: V) -> Query {
+        return [
+            self.name: other.meowSerialize()
+        ]
+    }
+}
+
 // sourcery: compareType=Data
 public struct VirtualData : VirtualVariable {
     public var name: String

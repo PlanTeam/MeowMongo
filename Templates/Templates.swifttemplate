@@ -125,7 +125,7 @@ for type in serializables {
           %>
           doc["<%= variable.name %>"] = self.<%= variable.name %>
         <%} else if variable.isArray, variable.typeName.array?.elementType?.based["Embeddable"] != nil {%>
-          doc["<%= variable.name %>"] = self.<%= variable.name %>
+          doc["<%= variable.name %>"] = self.<%= variable.name %><% if variable.typeName.isOptional { %>?<% } %>.map { $0.meowSerialize() }
           // If it's an array of references
         <%} else if variable.isArray, variable.typeName.array?.elementType?.name == "Reference" {%>
           doc["<%= variable.name %>"] = self.<%= variable.name %><% if variable.typeName.isOptional { %>?<% } %>.map { $0.id }
@@ -135,16 +135,19 @@ for type in serializables {
           // If this is a single reference
         } else if variable.typeName.name.hasPrefix("Reference") {%>
           if resolvingReferences {
-            doc["<%= variable.name %>"] = doc["<%= variable.name %>"] = try self.<%= variable.name %><% if variable.typeName.isOptional { %>?<% } %>.resolve().meowSerialize()
+            doc["<%= variable.name %>"] = try self.<%= variable.name %><% if variable.typeName.isOptional { %>?<% } %>.resolve().meowSerialize()
           } else {
             doc["<%= variable.name %>"] = self.<%= variable.name %><% if variable.typeName.isOptional { %>?<% } %>.id
           }
-        } else if variable.type?.based["Embeddable"] != nil { %>
+        <%} else if variable.type?.based["Embeddable"] != nil { %>
           doc["<%= variable.name %>"] = self.<%= variable.name %><% if variable.typeName.isOptional { %>?<% } %>.meowSerialize()
           <%
         } else {
           %>
           // <%= variable %>
+          // <%= variable.type %>
+          // <%= variable.type?.based %>
+          // <%= variable.typeName %>
           <%
         }
       }%>
@@ -155,13 +158,15 @@ for type in serializables {
     <%
     // Creates a new instance of this model/embeddable from a Document
     %>
-    convenience init(fromDocument source: Document) throws {
+  <% if type.kind == "class" { %> convenience <% } %> init(fromDocument source: Document) throws {
       var source = source
       // Extract all properties
       <% usedNames = [] %>
       <% for variable in type.variables where !usedNames.contains(variable.name) { %>
         <% usedNames.append(variable.name) %>
-        <% if variable.isArray, let elementType = variable.typeName.array?.elementTypeName.name, supportedPrimitives.contains(elementType) { %>
+        <% if variable.name == "id" { %>
+          let idValue: ObjectId = try Meow.Helpers.requireValue(source.removeValue(forKey: "_id") as? ObjectId, keyForError: "id")
+        <% } else if variable.isArray, let elementType = variable.typeName.array?.elementTypeName.name, supportedPrimitives.contains(elementType) { %>
           // The property is a BSON type, so we can just extract it from the document:
           <% if variable.typeName.isOptional { %>
             let <%=variable.name%>Value: <%=variable.typeName%> = <%=variable.typeName.unwrappedTypeName%>(source.removeValue(forKey: "<%=variable.name%>"))
@@ -185,11 +190,19 @@ for type in serializables {
             }
           <% } %>
         <%} else if variable.isArray, let subType = variable.typeName.array?.elementType, subType.based["Embeddable"] != nil { %>
-          // TODO: Optionals
-          let <%= variable.name%>PrimitiveValues = try Meow.Helpers.requireValue(Document(source.removeValue(forKey: "<%=variable.name%>")), keyForError: "<%=variable.name%>").arrayValue
-          let <%=variable.name%>Value: <%=variable.typeName%> = try <%=variable.name%>PrimitiveValues.map {
-            try <%= subType.name %>(value: $0)
-          }
+          <% let flat = variable.typeName.array!.elementTypeName.isOptional ? "flat" : "" %>
+
+          <% if variable.isOptional { %>
+            let <%= variable.name%>PrimitiveValues = try Document(source.removeValue(forKey: "<%=variable.name%>"))?.arrayValue
+            let <%=variable.name%>Value: <%=variable.typeName%> = try <%=variable.name%>PrimitiveValues?.<%=flat%>map {
+              try <%= subType.name %>(value: $0)
+            }
+          <% } else { %>
+            let <%= variable.name%>PrimitiveValues = try Meow.Helpers.requireValue(Document(source.removeValue(forKey: "<%=variable.name%>")), keyForError: "<%=variable.name%>").arrayValue
+            let <%=variable.name%>Value: <%=variable.typeName%> = try <%=variable.name%>PrimitiveValues.<%=flat%>map {
+              try <%= subType.name %>(value: $0)
+            }
+          <% } %>
         <% } else { %>
           <% if supportedPrimitives.contains(variable.typeName.unwrappedTypeName) { %>
             // The property is a BSON type, so we can just extract it from the document:
@@ -238,8 +251,6 @@ for type in serializables {
                 let <%=variable.name%>Value: <%=variable.typeName%> = try <%=variable.typeName%>(fromDocument: <%=variable.name%>Document)
               <% } %>
             <% } %>
-          <% } else if variable.name == "id" { %>
-            let idValue: ObjectId = try Meow.Helpers.requireValue(source.removeValue(forKey: "_id") as? ObjectId, keyForError: "id")
           <% } %>
         <% } %>
       <% } %>
@@ -304,8 +315,18 @@ for type in serializables {
           var <%= variable.name %>: VirtualReference<<%=variable.typeName.unwrappedTypeName%>.Model, <%=variable.typeName.unwrappedTypeName%>.DeleteRule> { return VirtualReference(name: keyPrefix + "<%=variable.name%>") }
         <% } else if variable.typeName.name.hasPrefix("[Reference") { %>
           var <%= variable.name %>: VirtualReferenceArray<<%=variable.typeName.unwrappedTypeName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "") %>.Model, <%=variable.typeName.unwrappedTypeName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")%>.DeleteRule> { return VirtualReferenceArray<<%=variable.typeName.unwrappedTypeName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "") %>.Model, <%=variable.typeName.unwrappedTypeName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")%>.DeleteRule>(name: keyPrefix + "<%=variable.name%>") }
+        <% } else if variable.typeName.array?.elementType?.based["Embeddable"] != nil { %>
+          <% if variable.typeName.array?.elementType?.kind == "enum" {%>
+            var <%=variable.name%>: VirtualSingleValueArray<<%=variable.typeName.array!.elementTypeName.name%>> { return VirtualSingleValueArray<<%=variable.typeName.array!.elementTypeName.name%>>(name: keyPrefix + "<%=variable.name%>") }
+          <% } else { %>
+            var <%=variable.name%>: VirtualEmbeddablesArray<<%=variable.typeName.array!.elementTypeName.name%>> { return VirtualEmbeddablesArray<<%=variable.typeName.array!.elementTypeName.name%>>(name: keyPrefix + "<%=variable.name%>.") }
+          <% } %>
         <% } else if variable.type?.based["Embeddable"] != nil { %>
-          var <%=variable.name%>: <%=variable.typeName.unwrappedTypeName%>.VirtualInstance { return <%=variable.typeName.unwrappedTypeName%>.VirtualInstance(keyPrefix: "<%=variable.name%>.") }
+          <% if variable.type?.kind == "enum" {%>
+            var <%=variable.name%>: <%=variable.typeName.unwrappedTypeName%>.VirtualInstance { return <%=variable.typeName.unwrappedTypeName%>.VirtualInstance(keyPrefix: "<%=variable.name%>") }
+          <% } else { %>
+            var <%=variable.name%>: <%=variable.typeName.unwrappedTypeName%>.VirtualInstance { return <%=variable.typeName.unwrappedTypeName%>.VirtualInstance(keyPrefix: "<%=variable.name%>.") }
+          <% } %>
         <% } else { %>
           // <%=variable%>
         <% } %>
